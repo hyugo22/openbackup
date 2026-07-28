@@ -1,0 +1,46 @@
+# Exemple d'unite systemd pour lancer OpenBackup en tant que service Linux.
+#
+# Installation :
+#   1. Deployez et buildez le projet sur la machine, par exemple dans /opt/openbackup :
+#        git clone https://github.com/hyugo22/openbackup.git /opt/openbackup
+#        cd /opt/openbackup
+#        npm ci
+#        npm run build
+#        cp .env.example .env   # puis editez .env (DATABASE_URL, JWT_SECRET, ...)
+#        npm run migrate:up
+#   2. Copiez ce fichier :
+#        sudo cp deploy/openbackup.service /etc/systemd/system/openbackup.service
+#   3. Adaptez si besoin les chemins/utilisateur ci-dessous a votre installation.
+#   4. Activez et demarrez le service :
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now openbackup
+#   5. Consultez les logs :
+#        sudo journalctl -u openbackup -f
+#
+# PostgreSQL doit etre accessible (instance locale ou distante) via l'URL
+# renseignee dans /opt/openbackup/.env (DATABASE_URL).
+
+[Unit]
+Description=OpenBackup - application de gestion de backups
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+# Utilisateur dedie non-root recommande (a creer au prealable : `useradd -r -s /usr/sbin/nologin openbackup`)
+User=openbackup
+Group=openbackup
+WorkingDirectory=/opt/openbackup/backend
+EnvironmentFile=/opt/openbackup/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=5
+
+# Durcissement basique du service
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/openbackup
+
+[Install]
+WantedBy=multi-user.target

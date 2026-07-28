@@ -1,0 +1,53 @@
+# Lance l'application complete (backend + frontend servis par le meme
+# conteneur, et une base PostgreSQL dediee) en une seule commande :
+#
+#   docker compose up
+#
+# Copiez d'abord .env.example vers .env et ajustez au moins JWT_SECRET.
+
+services:
+  # Base de donnees PostgreSQL, avec un volume nomme pour persister les
+  # donnees entre redemarrages/mises a jour du conteneur.
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openbackup
+      POSTGRES_PASSWORD: openbackup
+      POSTGRES_DB: openbackup
+    volumes:
+      - openbackup_db_data:/var/lib/postgresql/data
+    ports:
+      # Expose Postgres sur l'hote pour faciliter le debug local
+      # (ex: se connecter avec psql). A retirer si non necessaire.
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openbackup -d openbackup']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Application : backend Express + frontend buildé servi en statique par
+  # ce meme backend (voir Dockerfile / backend/src/app.ts). Un seul
+  # conteneur applicatif, pas de service nginx separe.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Connexion a la base via le nom de service Docker Compose "db"
+      DATABASE_URL: postgresql://openbackup:openbackup@db:5432/openbackup
+      JWT_SECRET: ${JWT_SECRET:?Definissez JWT_SECRET dans votre fichier .env}
+      # En conteneur unique, frontend et backend partagent la meme origine
+      CORS_ORIGIN: http://localhost:3001
+    ports:
+      - '3001:3001'
+
+volumes:
+  openbackup_db_data:

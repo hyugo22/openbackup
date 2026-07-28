@@ -1,0 +1,25 @@
+{
+  "name": "openbackup",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Application web open source de gestion de backups",
+  "license": "AGPL-3.0-only",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "test": "npm run test -w backend",
+    "migrate:up": "npm run migrate:up -w backend",
+    "migrate:down": "npm run migrate:down -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
