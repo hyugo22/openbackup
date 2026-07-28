@@ -5,7 +5,7 @@
 # npm workspaces. Isolee dans sa propre etape pour profiter du cache Docker :
 # tant que les package.json ne changent pas, cette etape n'est pas rejouee.
 # --------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
@@ -37,7 +37,7 @@ RUN npm run build --workspace=frontend
 # Etape finale : image d'execution minimale, sans outils de build ni
 # dependances de developpement.
 # --------------------------------------------------------------------------
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
