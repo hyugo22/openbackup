@@ -10,6 +10,16 @@ jobs, with execution history.
 > history are functional. Automatic scheduling (cron), notifications, cloud
 > storage and backup encryption will be added in future versions.
 
+## About this project
+
+OpenBackup is largely **vibe-coded**: most of the code was generated with
+AI assistance ([Claude Code](https://claude.com/claude-code)), under human
+direction and review at each step (architecture decisions, code review,
+and manual verification that build/lint/tests/Docker all actually work).
+This is disclosed here for transparency. If you plan to run OpenBackup in
+production or with sensitive data, please read the code yourself and
+consider an independent review first — see [Security](#security) below.
+
 ## Tech stack
 
 - **Frontend**: React + TypeScript, Vite
@@ -126,6 +136,32 @@ with bcrypt before storage.
 The [GitHub Actions](.github/workflows/ci.yml) pipeline runs, in order:
 `build` (TypeScript compilation) → `test` (lint + unit tests) → `docker`
 (image build) → `push` (publish to GHCR, only on `main` or on a tag).
+
+## Security
+
+### Current measures
+
+- **Input validation**: all API input is validated with [Zod](https://zod.dev/) on the backend; nothing from the client is trusted as-is.
+- **SQL injection**: no ORM — all queries are hand-written, parameterized SQL via [`pg`](https://node-postgres.com/) (no string concatenation of user input into SQL).
+- **Passwords**: hashed with bcrypt (12 rounds) before storage, never logged.
+- **Sessions**: JWT stored in an `httpOnly`, `SameSite=Lax` cookie (not readable from JavaScript, mitigating XSS-based token theft), `secure` in production.
+- **HTTP headers**: [helmet.js](https://helmetjs.github.io/) sets standard security headers on every response.
+- **CORS**: restricted to the configured frontend origin (`CORS_ORIGIN`), not wide open.
+- **Rate limiting**: login/register endpoints are throttled ([`express-rate-limit`](https://github.com/express-rate-limit/express-rate-limit)) to slow down brute-force attempts.
+- **Error handling**: stack traces and internal error details are never sent to the client in production.
+- **Dependency scanning**: [Dependabot](.github/dependabot.yml) opens weekly update PRs for npm, Docker base images and GitHub Actions; `npm audit` also runs in CI (see [`ci.yml`](.github/workflows/ci.yml)) and is currently informational (`continue-on-error`) while a couple of dev-tooling-only findings are tracked.
+
+### Planned / roadmap
+
+These are **not implemented yet** — listed here so expectations are clear:
+
+- Making the CI `npm audit` step blocking once the remaining dev-only findings are resolved.
+- Static analysis / SAST (e.g. [CodeQL](https://codeql.github.com/)) wired into CI.
+- Container image vulnerability scanning (e.g. Trivy) for the published Docker image.
+- A `SECURITY.md` with a responsible-disclosure process for reporting vulnerabilities.
+- An independent security review before recommending production use with sensitive data.
+
+If you find a security issue, please open an issue (or, once available, follow `SECURITY.md`) rather than a public pull request describing the exploit.
 
 ## Personal data (GDPR)
 

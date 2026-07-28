@@ -42,6 +42,26 @@ jobs:
       - run: npm run lint
       - run: npm run test
 
+  security:
+    name: Audit des dependances (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # Informatif pour l'instant (continue-on-error) : certaines
+      # vulnerabilites connues touchent uniquement des devDependencies
+      # (eslint, vite, node-pg-migrate) non exploitables via notre usage et
+      # non presentes dans l'image de production. A rendre bloquant une
+      # fois ces dependances mises a jour vers des versions sans breaking
+      # change.
+      - name: npm audit (severite haute et critique)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
   docker:
     name: Build image Docker
     runs-on: ubuntu-latest
